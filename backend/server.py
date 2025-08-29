@@ -355,7 +355,7 @@ async def analyze_eeg_file(
             temp_file_path = temp_file.name
         
         # Load EEG data
-        raw = mne.io.read_raw_edf(temp_file_path, verbose=False)
+        raw = mne.io.read_raw_edf(temp_file_path, verbose=False, preload=True)
         
         # Analyze the data
         analysis_results = analyze_sleep_eeg(raw, {
