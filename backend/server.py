@@ -231,13 +231,19 @@ def create_regression_analysis(results_df):
     X_with_intercept = sm.add_constant(X_scaled)
     model = sm.OLS(y, X_with_intercept).fit()
     
+    # Handle NaN and infinity values in results
+    def clean_float(value):
+        if np.isnan(value) or np.isinf(value):
+            return 0.0
+        return float(value)
+    
     return {
-        'r_squared': model.rsquared,
-        'adjusted_r_squared': model.rsquared_adj,
-        'f_statistic': model.fvalue,
-        'f_pvalue': model.f_pvalue,
-        'coefficients': dict(zip(['intercept'] + available_predictors, model.params)),
-        'p_values': dict(zip(['intercept'] + available_predictors, model.pvalues)),
+        'r_squared': clean_float(model.rsquared),
+        'adjusted_r_squared': clean_float(model.rsquared_adj),
+        'f_statistic': clean_float(model.fvalue),
+        'f_pvalue': clean_float(model.f_pvalue),
+        'coefficients': {k: clean_float(v) for k, v in dict(zip(['intercept'] + available_predictors, model.params)).items()},
+        'p_values': {k: clean_float(v) for k, v in dict(zip(['intercept'] + available_predictors, model.pvalues)).items()},
         'confidence_intervals': model.conf_int().to_dict(),
         'sample_size': len(regression_data)
     }
