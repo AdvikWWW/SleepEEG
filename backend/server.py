@@ -288,7 +288,7 @@ Sample size: {len(results_df)} subjects."""
         
         results_text = f"""Mean memory score: {mean_memory:.2f}
 Mean spindle density: {mean_spindles:.2f} spindles/min
-Mean REM theta power: {mean_theta:.2f} μV²
+Mean REM theta power: {mean_theta:.2f} uV²
 
 Statistical analysis revealed significant correlations between sleep architecture parameters 
 and memory consolidation performance."""
