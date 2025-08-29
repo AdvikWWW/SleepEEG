@@ -182,6 +182,9 @@ def create_correlation_analysis(results_df):
                 try:
                     r, p = stats.pearsonr(results_df[col1].dropna(), 
                                         results_df[col2].dropna())
+                    # Handle NaN and infinity values
+                    r = float(r) if not (np.isnan(r) or np.isinf(r)) else 0.0
+                    p = float(p) if not (np.isnan(p) or np.isinf(p)) else 1.0
                     correlations[f"{col1}_vs_{col2}"] = r
                     p_values[f"{col1}_vs_{col2}"] = p
                 except:
