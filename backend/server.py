@@ -172,6 +172,10 @@ def create_correlation_analysis(results_df):
     available_cols = [col for col in numeric_cols if col in results_df.columns]
     corr_data = results_df[available_cols].corr()
     
+    # Replace NaN and infinity values with 0
+    corr_data = corr_data.fillna(0.0)
+    corr_data = corr_data.replace([np.inf, -np.inf], 0.0)
+    
     # Statistical significance tests
     correlations = {}
     p_values = {}
