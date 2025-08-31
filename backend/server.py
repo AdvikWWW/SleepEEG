@@ -372,8 +372,13 @@ and memory consolidation performance."""
     
     # Save to bytes
     output = BytesIO()
-    pdf_string = pdf.output(dest='S').encode('latin-1')
-    output.write(pdf_string)
+    pdf_output = pdf.output(dest='S')
+    # Handle both string and bytearray outputs from fpdf
+    if isinstance(pdf_output, str):
+        pdf_bytes = pdf_output.encode('latin-1')
+    else:
+        pdf_bytes = bytes(pdf_output)
+    output.write(pdf_bytes)
     output.seek(0)
     
     return output.getvalue()
