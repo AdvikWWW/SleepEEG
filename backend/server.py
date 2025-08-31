@@ -244,39 +244,69 @@ def create_regression_analysis(results_df):
     if len(available_predictors) < 2:
         return {"error": "Insufficient predictors for regression"}
     
-    # Clean data
+    # Clean data - remove any rows with NaN values
     regression_data = results_df[available_predictors + ['memory_score']].dropna()
     
     if len(regression_data) < 5:
         return {"error": "Insufficient sample size for regression"}
     
-    X = regression_data[available_predictors]
-    y = regression_data['memory_score']
-    
-    # Standardize predictors
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    
-    # Fit regression
-    X_with_intercept = sm.add_constant(X_scaled)
-    model = sm.OLS(y, X_with_intercept).fit()
-    
-    # Handle NaN and infinity values in results
-    def clean_float(value):
-        if np.isnan(value) or np.isinf(value):
-            return 0.0
-        return float(value)
-    
-    return {
-        'r_squared': clean_float(model.rsquared),
-        'adjusted_r_squared': clean_float(model.rsquared_adj),
-        'f_statistic': clean_float(model.fvalue),
-        'f_pvalue': clean_float(model.f_pvalue),
-        'coefficients': {k: clean_float(v) for k, v in dict(zip(['intercept'] + available_predictors, model.params)).items()},
-        'p_values': {k: clean_float(v) for k, v in dict(zip(['intercept'] + available_predictors, model.pvalues)).items()},
-        'confidence_intervals': model.conf_int().to_dict(),
-        'sample_size': len(regression_data)
-    }
+    try:
+        X = regression_data[available_predictors]
+        y = regression_data['memory_score']
+        
+        # Check for constant columns or insufficient variance
+        if X.std().min() < 1e-10:
+            return {"error": "Predictors have insufficient variance"}
+        
+        # Standardize predictors
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        
+        # Check for multicollinearity
+        if np.linalg.cond(X_scaled) > 1e12:
+            return {"error": "Severe multicollinearity detected"}
+        
+        # Fit regression
+        X_with_intercept = sm.add_constant(X_scaled)
+        model = sm.OLS(y, X_with_intercept).fit()
+        
+        # Handle NaN and infinity values in results
+        def clean_float(value):
+            if value is None or np.isnan(value) or np.isinf(value):
+                return 0.0
+            return float(value)
+        
+        def clean_dict(d):
+            return {k: clean_float(v) for k, v in d.items()}
+        
+        # Extract confidence intervals safely
+        conf_int = model.conf_int()
+        conf_int_dict = {}
+        param_names = ['intercept'] + available_predictors
+        
+        for i, name in enumerate(param_names):
+            if i < len(conf_int):
+                conf_int_dict[name] = {
+                    'lower': clean_float(conf_int.iloc[i, 0]),
+                    'upper': clean_float(conf_int.iloc[i, 1])
+                }
+            else:
+                conf_int_dict[name] = {'lower': 0.0, 'upper': 0.0}
+        
+        return {
+            'r_squared': clean_float(model.rsquared),
+            'adjusted_r_squared': clean_float(model.rsquared_adj),
+            'f_statistic': clean_float(model.fvalue),
+            'f_pvalue': clean_float(model.f_pvalue),
+            'coefficients': clean_dict(dict(zip(param_names, model.params))),
+            'p_values': clean_dict(dict(zip(param_names, model.pvalues))),
+            'confidence_intervals': conf_int_dict,
+            'sample_size': len(regression_data)
+        }
+        
+    except Exception as e:
+        logger.error(f"Regression analysis error: {str(e)}")
+        return {"error": f"Regression analysis failed: {str(e)}"}
 
 def generate_research_report(results_df, stats_results, correlation_results):
     """Generate a PDF research report"""
