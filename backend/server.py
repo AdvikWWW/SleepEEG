@@ -387,9 +387,12 @@ async def analyze_eeg_file(
 ):
     """Analyze uploaded EEG file"""
     
-    if not file.filename.endswith(('.edf', '.bdf')):
+    logger.info(f"Starting EEG analysis for subject {subject_id}, file: {file.filename}")
+    
+    if not file.filename.lower().endswith(('.edf', '.bdf')):
         raise HTTPException(status_code=400, detail="Only EDF/BDF files are supported")
     
+    temp_file_path = None
     try:
         # Save uploaded file temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix='.edf') as temp_file:
@@ -397,15 +400,26 @@ async def analyze_eeg_file(
             temp_file.write(content)
             temp_file_path = temp_file.name
         
-        # Load EEG data
-        raw = mne.io.read_raw_edf(temp_file_path, verbose=False, preload=True)
+        logger.info(f"File saved temporarily: {temp_file_path}, size: {len(content)} bytes")
         
-        # Analyze the data
-        analysis_results = analyze_sleep_eeg(raw, {
+        # Load EEG data with timeout protection
+        try:
+            raw = mne.io.read_raw_edf(temp_file_path, verbose=False, preload=True)
+            logger.info(f"EDF loaded successfully: {len(raw.ch_names)} channels, {raw.info['sfreq']} Hz")
+        except Exception as mne_error:
+            logger.error(f"MNE loading error: {str(mne_error)}")
+            raise HTTPException(status_code=400, detail=f"Invalid EDF file format: {str(mne_error)}")
+        
+        # Analyze the data with subject info
+        subject_info = {
             'memory_score': memory_score,
             'age': age,
             'sex': sex
-        })
+        }
+        
+        logger.info("Starting sleep analysis...")
+        analysis_results = analyze_sleep_eeg(raw, subject_info)
+        logger.info("Sleep analysis completed successfully")
         
         # Create result object
         result = EEGAnalysisResult(
@@ -418,15 +432,26 @@ async def analyze_eeg_file(
         )
         
         # Save to database
-        await db.eeg_analyses.insert_one(result.dict())
-        
-        # Clean up temp file
-        os.unlink(temp_file_path)
+        result_dict = result.dict()
+        await db.eeg_analyses.insert_one(result_dict)
+        logger.info(f"Analysis saved to database for subject {subject_id}")
         
         return result
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (these are expected errors)
+        raise
     except Exception as e:
+        logger.error(f"Unexpected error in EEG analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+    finally:
+        # Clean up temp file
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.unlink(temp_file_path)
+                logger.info("Temporary file cleaned up")
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to cleanup temp file: {cleanup_error}")
 
 @api_router.get("/analysis-results")
 async def get_analysis_results():
