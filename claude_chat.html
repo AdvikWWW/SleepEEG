@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Claude Sonnet 4 Chat</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #response { white-space: pre-wrap; margin-top: 20px; }
+        input, button { padding: 5px; font-size: 16px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Claude Sonnet 4 Chat</h1>
+    <input type="text" id="userInput" placeholder="Type your prompt here" size="50">
+    <button onclick="sendPrompt()">Send</button>
+    <div id="response"></div>
+
+    <script>
+        function sendPrompt() {
+            const prompt = document.getElementById("userInput").value;
+            if (!prompt) return;
+
+            document.getElementById("response").innerText = "Thinking...";
+
+            puter.ai.chat(prompt, { model: "claude-sonnet-4" })
+                .then(res => {
+                    const text = res.message?.content?.[0]?.text || "No response";
+                    document.getElementById("response").innerText = text;
+                })
+                .catch(err => {
+                    document.getElementById("response").innerText = "Error: " + err;
+                });
+        }
+    </script>
+</body>
+</html>
