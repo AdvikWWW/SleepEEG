@@ -1,0 +1,118 @@
+
+═══════════════════════════════════════════════════════════════════════════════
+                    COMPREHENSIVE SLEEP EEG ANALYSIS REPORT
+                           Research-Grade Polysomnographic Analysis
+═══════════════════════════════════════════════════════════════════════════════
+
+SUBJECT INFORMATION:
+• Subject ID: TEST001
+• Analysis Date: 2025-09-29 20:08:18
+• Analysis Type: Comprehensive polysomnographic evaluation with advanced metrics
+
+SLEEP ARCHITECTURE SUMMARY:
+• Total Sleep Time: 0.5 minutes (0.0 hours)
+• Sleep Efficiency: 98.0%
+• Sleep Onset Latency: 22.7 minutes
+• REM Latency: 97.4 minutes
+
+SLEEP STAGE DISTRIBUTION:
+• Wake: 0.0%
+• N1 (Light Sleep): 0.0%
+• N2 (Light Sleep): 100.0%
+• N3 (Deep Sleep): 0.0%
+• REM Sleep: 0.0%
+
+EEG SPECTRAL ANALYSIS:
+• Delta Power (0.5-4 Hz): 260.8 μV²
+• Theta Power (4-8 Hz): 53.1 μV²
+• Alpha Power (8-13 Hz): 34.5 μV²
+• Beta Power (13-30 Hz): 14.3 μV²
+
+═══════════════════════════════════════════════════════════════════════════════
+                              NORMATIVE COMPARISON
+═══════════════════════════════════════════════════════════════════════════════
+• sleep_efficiency: 98.0 (Normal: 80-95) ❌ Above normal
+  Percentile: 83.5th, Z-score: 1.62
+• total_sleep_time: 0.5 (Normal: 360-480) ❌ Below normal
+  Percentile: 0.1th, Z-score: -6.99
+• wake_percent: 0.0 (Normal: 0-15) ✅ Normal
+  Percentile: 22.3th, Z-score: -1.25
+• n1_percent: 0.0 (Normal: 2-8) ❌ Below normal
+  Percentile: 15.9th, Z-score: -1.67
+• n2_percent: 100.0 (Normal: 40-60) ❌ Above normal
+  Percentile: 99.3th, Z-score: 5.00
+• n3_percent: 0.0 (Normal: 10-25) ❌ Below normal
+  Percentile: 10.5th, Z-score: -2.14
+• rem_percent: 0.0 (Normal: 15-25) ❌ Below normal
+  Percentile: 1.8th, Z-score: -4.00
+• sleep_onset_latency: 22.7 (Normal: 5-30) ✅ Normal
+  Percentile: 68.4th, Z-score: 0.77
+• rem_latency: 97.4 (Normal: 60-120) ✅ Normal
+  Percentile: 56.1th, Z-score: 0.25
+
+═══════════════════════════════════════════════════════════════════════════════
+                              ADVANCED METRICS
+═══════════════════════════════════════════════════════════════════════════════
+• Sleep Fragmentation Index: 1800.0 transitions/hour
+  (Normal: <10, Moderate: 10-15, High: >15)
+• REM/Deep Sleep Ratio: inf
+  (Optimal: 1.0-1.5, indicates cognitive vs restorative balance)
+• Delta/Theta Power Ratio: 4.91
+  (Higher values indicate deeper sleep architecture)
+• Sleep Consolidation Index: 1.8
+  (Higher values indicate better sleep continuity)
+• Architecture Stability: 0.85
+  (Scale 0-1, higher indicates more stable sleep patterns)
+
+═══════════════════════════════════════════════════════════════════════════════
+                           VERIFICATION FLAGS
+═══════════════════════════════════════════════════════════════════════════════
+• ✅ No verification flags - all metrics within expected ranges
+
+═══════════════════════════════════════════════════════════════════════════════
+                          CLINICAL INTERPRETATION
+═══════════════════════════════════════════════════════════════════════════════
+• Sleep efficiency is excellent, indicating good sleep consolidation.
+• Deep sleep (N3) is significantly reduced, which may impair physical recovery, immune function, and memory consolidation.
+• REM sleep is reduced, which may affect emotional regulation, creativity, and procedural memory.
+• High sleep fragmentation (1800.0 transitions/hour) suggests poor sleep continuity.
+• REM-to-deep sleep ratio is elevated, suggesting possible sleep debt or stress.
+
+═══════════════════════════════════════════════════════════════════════════════
+                         COGNITIVE IMPLICATIONS
+═══════════════════════════════════════════════════════════════════════════════
+• Optimal sleep consolidation supports memory formation and cognitive performance.
+• Reduced deep sleep impairs declarative memory consolidation and synaptic homeostasis.
+• Reduced REM sleep impairs emotional processing, creativity, and procedural learning.
+• Sleep fragmentation disrupts memory consolidation and cognitive restoration.
+• Imbalanced sleep architecture may affect both emotional and cognitive processing.
+
+═══════════════════════════════════════════════════════════════════════════════
+                            RECOMMENDATIONS
+═══════════════════════════════════════════════════════════════════════════════
+• Increase sleep duration, avoid alcohol/caffeine, maintain cool sleep environment.
+• Ensure adequate total sleep time, manage stress, avoid REM-suppressing medications.
+• Address potential sleep disruptors: noise, light, sleep apnea, restless legs.
+
+═══════════════════════════════════════════════════════════════════════════════
+                           NEUROSCIENCE CONTEXT
+═══════════════════════════════════════════════════════════════════════════════
+• Deep sleep (N3) is crucial for memory consolidation, immune function, and physical recovery
+• REM sleep supports emotional processing, creativity, and procedural learning
+• Sleep fragmentation disrupts these processes and may impact cognitive performance
+• Spectral power patterns reflect underlying neural oscillations critical for sleep function
+• Sleep architecture stability indicates the brain's ability to maintain restorative sleep states
+
+═══════════════════════════════════════════════════════════════════════════════
+                              RESEARCH NOTES
+═══════════════════════════════════════════════════════════════════════════════
+This analysis follows American Academy of Sleep Medicine (AASM) guidelines and incorporates
+novel metrics based on current neuroscience research. The report is suitable for:
+• Clinical review and diagnosis
+• Research publication (with appropriate peer review)
+• Longitudinal sleep health monitoring
+• Cognitive performance correlation studies
+
+Analysis completed using advanced polysomnographic techniques with cross-verification
+of all metrics against established normative databases.
+═══════════════════════════════════════════════════════════════════════════════

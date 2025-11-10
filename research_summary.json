@@ -1,0 +1,10 @@
+{
+  "title": "Comprehensive Polysomnographic Analysis - Subject TEST001",
+  "abstract": "Objective: Comprehensive sleep architecture analysis using advanced EEG metrics and normative comparisons.\nMethods: Polysomnographic data analyzed using standard AASM criteria plus novel neuroscience-informed metrics.\nResults: Sleep efficiency 98.0%, with 0 verification flags identified.\nConclusion: Normal sleep architecture with clinical implications for cognitive function.",
+  "key_findings": [
+    "Sleep efficiency: 98.0% (Above normal)",
+    "Deep sleep (N3): 0.0% (Below normal)",
+    "REM sleep: 0.0% (Below normal)",
+    "Sleep fragmentation: 1800.0 transitions/hour"
+  ]
+}

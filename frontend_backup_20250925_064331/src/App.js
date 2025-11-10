@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import axios from 'axios';
-import { Upload, Brain, BarChart3, Download, FileText, Database, Zap, Activity, TrendingUp, Users, Clock, Microscope } from 'lucide-react';
+import { Upload, Brain, BarChart3, Download, FileText, Database, Zap, Activity, TrendingUp, Users, Clock, Microscope, Star, Target, Lightbulb, FileSpreadsheet, Timeline } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Input } from './components/ui/input';
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Badge } from './components/ui/badge';
 import { Progress } from './components/ui/progress';
 import { Separator } from './components/ui/separator';
+import { Alert, AlertDescription } from './components/ui/alert';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -20,7 +21,12 @@ function App() {
   const [analysisResults, setAnalysisResults] = useState([]);
   const [statisticalResults, setStatisticalResults] = useState(null);
   const [visualizations, setVisualizations] = useState({});
+  const [populationComparison, setPopulationComparison] = useState(null);
+  const [sleepTips, setSleepTips] = useState(null);
+  const [longitudinalData, setLongitudinalData] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [datasets, setDatasets] = useState([]);
   
   // Form data for EEG analysis
@@ -76,12 +82,49 @@ function App() {
     }
   };
 
+  const fetchPopulationComparison = async (subjectId) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/population-comparison/${subjectId}`);
+      setPopulationComparison(response.data);
+    } catch (error) {
+      console.error('Error fetching population comparison:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSleepTips = async (subjectId) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/sleep-tips/${subjectId}`);
+      setSleepTips(response.data);
+    } catch (error) {
+      console.error('Error fetching sleep tips:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLongitudinalData = async (subjectId) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/longitudinal-tracking/${subjectId}`);
+      setLongitudinalData(response.data);
+    } catch (error) {
+      console.error('Error fetching longitudinal data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
-    if (file && (file.name.endsWith('.edf') || file.name.endsWith('.bdf'))) {
+    if (file && (file.name.endsWith('.edf') || file.name.endsWith('.bdf') || file.name.endsWith('.csv'))) {
       setUploadedFile(file);
+      setUploadProgress(0);
     } else {
-      alert('Please upload a valid EDF or BDF file');
+      alert('Please upload a valid EDF, BDF, or CSV file');
     }
   };
 
@@ -92,6 +135,8 @@ function App() {
     }
 
     setLoading(true);
+    setUploadProgress(10);
+    
     const formData = new FormData();
     formData.append('file', uploadedFile);
     formData.append('subject_id', subjectId);
@@ -100,10 +145,16 @@ function App() {
     if (sex) formData.append('sex', sex);
 
     try {
+      setUploadProgress(30);
       const response = await axios.post(`${API}/analyze-eeg`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(Math.min(progress, 90));
+        }
       });
       
+      setUploadProgress(100);
       setAnalysisResults([...analysisResults, response.data]);
       setUploadedFile(null);
       setSubjectId('');
@@ -112,11 +163,13 @@ function App() {
       setSex('');
       
       alert('Analysis completed successfully!');
+      setActiveTab('results');
     } catch (error) {
       console.error('Error analyzing EEG:', error);
       alert('Analysis failed. Please check your file format.');
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -129,12 +182,30 @@ function App() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'sleep_spindle_analysis_report.pdf');
+      link.setAttribute('download', 'comprehensive_sleep_analysis_report.pdf');
       document.body.appendChild(link);
       link.click();
       link.remove();
     } catch (error) {
       console.error('Error downloading report:', error);
+    }
+  };
+
+  const downloadCSV = async () => {
+    try {
+      const response = await axios.get(`${API}/export-csv`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'sleep_eeg_analysis_results.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error downloading CSV:', error);
     }
   };
 
@@ -156,16 +227,244 @@ function App() {
     }
   };
 
-  const renderPlotlyChart = (plotData) => {
-    if (!plotData) return null;
+  const renderHypnogram = (hypnogramData) => {
+    if (!hypnogramData || hypnogramData.length === 0) return null;
     
-    // This is a simplified version - in a real app you'd use react-plotly.js
+    const stageColors = {
+      'Wake': '#ff6b6b',
+      'REM': '#4ecdc4',
+      'N1': '#45b7d1',
+      'N2': '#96ceb4',
+      'N3': '#2d3436'
+    };
+    
     return (
-      <div className="w-full h-96 bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-        <div className="text-center">
-          <BarChart3 className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-          <p className="text-gray-600">Interactive Chart Available</p>
-          <p className="text-sm text-gray-500">Chart data loaded successfully</p>
+      <div className="w-full h-32 bg-gray-50 rounded-lg p-4 border">
+        <h4 className="text-sm font-semibold mb-2">Sleep Hypnogram</h4>
+        <div className="flex h-20 items-end space-x-0.5">
+          {hypnogramData.slice(0, 100).map((epoch, index) => (
+            <div
+              key={index}
+              className="flex-1 rounded-t-sm"
+              style={{
+                backgroundColor: stageColors[epoch.stage] || '#gray',
+                height: epoch.stage === 'Wake' ? '100%' : 
+                       epoch.stage === 'REM' ? '80%' :
+                       epoch.stage === 'N1' ? '60%' :
+                       epoch.stage === 'N2' ? '40%' : '20%'
+              }}
+              title={`${epoch.stage} at ${epoch.time_minutes.toFixed(1)} min`}
+            />
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>0 min</span>
+          <span>{(hypnogramData[hypnogramData.length - 1]?.time_minutes || 0).toFixed(0)} min</span>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSleepStageChart = (result) => {
+    const stages = [
+      { name: 'Wake', value: result.wake_percent || 0, color: '#ff6b6b' },
+      { name: 'REM', value: result.rem_percent || 0, color: '#4ecdc4' },
+      { name: 'N1', value: result.n1_percent || 0, color: '#45b7d1' },
+      { name: 'N2', value: result.n2_percent || 0, color: '#96ceb4' },
+      { name: 'N3', value: result.n3_percent || 0, color: '#2d3436' }
+    ];
+
+    return (
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold">Sleep Stage Distribution</h4>
+        {stages.map((stage) => (
+          <div key={stage.name} className="flex items-center space-x-3">
+            <div 
+              className="w-4 h-4 rounded"
+              style={{ backgroundColor: stage.color }}
+            />
+            <span className="text-sm w-12">{stage.name}</span>
+            <div className="flex-1">
+              <Progress value={stage.value} className="h-2" />
+            </div>
+            <span className="text-sm font-medium w-12 text-right">
+              {stage.value.toFixed(1)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderPopulationComparison = () => {
+    if (!populationComparison) return null;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Population Comparison</h3>
+          <Badge variant="outline">
+            Age: {populationComparison.age} | {populationComparison.sex || 'Not specified'}
+          </Badge>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Object.entries(populationComparison.comparison).map(([metric, data]) => (
+            <Card key={metric} className="border-l-4" style={{ borderLeftColor: data.color }}>
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="text-sm font-medium capitalize">
+                    {metric.replace(/_/g, ' ')}
+                  </h4>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs ${
+                      data.category === 'Above Average' ? 'bg-green-50 text-green-700' :
+                      data.category === 'Average' ? 'bg-blue-50 text-blue-700' :
+                      'bg-orange-50 text-orange-700'
+                    }`}
+                  >
+                    {data.category}
+                  </Badge>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Your value:</span>
+                    <span className="font-semibold">{data.user_value.toFixed(1)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Population avg:</span>
+                    <span>{data.population_mean.toFixed(1)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Percentile:</span>
+                    <span className="font-semibold">{data.percentile.toFixed(0)}th</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSleepTips = () => {
+    if (!sleepTips || !sleepTips.tips) return null;
+
+    const priorityColors = {
+      high: 'border-red-200 bg-red-50',
+      medium: 'border-yellow-200 bg-yellow-50',
+      low: 'border-green-200 bg-green-50'
+    };
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Personalized Sleep Tips</h3>
+          <div className="flex items-center space-x-2">
+            <Star className="w-5 h-5 text-yellow-500" />
+            <span className="font-semibold">{sleepTips.sleep_quality_score.toFixed(1)}/100</span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {sleepTips.tips.map((tip, index) => (
+            <Alert key={index} className={priorityColors[tip.priority]}>
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">{tip.icon}</span>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-semibold text-sm">{tip.category}</h4>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${
+                        tip.priority === 'high' ? 'border-red-300 text-red-700' :
+                        tip.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
+                        'border-green-300 text-green-700'
+                      }`}
+                    >
+                      {tip.priority} priority
+                    </Badge>
+                  </div>
+                  <AlertDescription className="text-sm">
+                    {tip.tip}
+                  </AlertDescription>
+                </div>
+              </div>
+            </Alert>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderLongitudinalTracking = () => {
+    if (!longitudinalData) return null;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Longitudinal Tracking</h3>
+          <Badge variant="outline">
+            {longitudinalData.total_analyses} analyses
+          </Badge>
+        </div>
+
+        {longitudinalData.trends && Object.keys(longitudinalData.trends).length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {Object.entries(longitudinalData.trends).map(([metric, trend]) => (
+              <Card key={metric}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium capitalize">
+                      {metric.replace(/_/g, ' ')}
+                    </h4>
+                    <div className={`flex items-center space-x-1 ${
+                      trend.direction === 'improving' ? 'text-green-600' :
+                      trend.direction === 'declining' ? 'text-red-600' :
+                      'text-gray-600'
+                    }`}>
+                      <TrendingUp className="w-4 h-4" />
+                      <span className="text-xs font-semibold">
+                        {trend.direction}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-lg font-bold">
+                    {trend.change > 0 ? '+' : ''}{trend.change.toFixed(1)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {trend.percentage_change.toFixed(1)}% change
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h4 className="font-semibold mb-3">Analysis History</h4>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {longitudinalData.tracking_data.map((analysis, index) => (
+              <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                <div>
+                  <div className="font-medium text-sm">{analysis.filename}</div>
+                  <div className="text-xs text-gray-500">
+                    {new Date(analysis.date).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-semibold text-sm">
+                    {analysis.sleep_quality_score?.toFixed(1) || 'N/A'}/100
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {analysis.sleep_efficiency?.toFixed(1) || 'N/A'}% efficiency
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -310,7 +609,7 @@ function App() {
           
           <CardContent className="p-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 mb-8 bg-gray-100 rounded-xl p-1">
+              <TabsList className="grid w-full grid-cols-7 mb-8 bg-gray-100 rounded-xl p-1">
                 <TabsTrigger value="upload" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
                   <Upload className="w-4 h-4 mr-2" />
                   Upload
@@ -319,13 +618,21 @@ function App() {
                   <Activity className="w-4 h-4 mr-2" />
                   Results
                 </TabsTrigger>
+                <TabsTrigger value="comparison" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <Target className="w-4 h-4 mr-2" />
+                  Compare
+                </TabsTrigger>
+                <TabsTrigger value="tips" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <Lightbulb className="w-4 h-4 mr-2" />
+                  Tips
+                </TabsTrigger>
+                <TabsTrigger value="tracking" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <Timeline className="w-4 h-4 mr-2" />
+                  Tracking
+                </TabsTrigger>
                 <TabsTrigger value="statistics" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Statistics
-                </TabsTrigger>
-                <TabsTrigger value="visualizations" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Charts
                 </TabsTrigger>
                 <TabsTrigger value="datasets" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
                   <Database className="w-4 h-4 mr-2" />
@@ -339,10 +646,10 @@ function App() {
                     <div className="border-2 border-dashed border-blue-300 bg-blue-50/30 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
                       <Upload className="w-12 h-12 mx-auto text-blue-500 mb-4" />
                       <h3 className="text-lg font-semibold text-gray-800 mb-2">Upload EEG File</h3>
-                      <p className="text-gray-600 mb-4">Select EDF or BDF format files</p>
+                      <p className="text-gray-600 mb-4">Select EDF, BDF, or CSV format files</p>
                       <Input
                         type="file"
-                        accept=".edf,.bdf"
+                        accept=".edf,.bdf,.csv"
                         onChange={handleFileUpload}
                         className="max-w-xs mx-auto"
                       />
@@ -350,6 +657,12 @@ function App() {
                         <Badge variant="outline" className="mt-4 bg-green-50 text-green-700 border-green-200">
                           {uploadedFile.name}
                         </Badge>
+                      )}
+                      {uploadProgress > 0 && (
+                        <div className="mt-4">
+                          <Progress value={uploadProgress} className="w-full" />
+                          <p className="text-sm text-gray-600 mt-1">Processing... {uploadProgress}%</p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -441,26 +754,73 @@ function App() {
                     <p>No analysis results yet. Upload and analyze EEG data to see results here.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 max-h-96 overflow-y-auto">
+                  <div className="space-y-6">
                     {analysisResults.map((result, index) => (
                       <Card key={index} className="border-l-4 border-l-blue-500 shadow-sm">
-                        <CardContent className="p-4">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-4">
                             <div>
-                              <p className="text-sm font-medium text-gray-600">Subject</p>
-                              <p className="text-lg font-semibold text-gray-800">{result.subject_id}</p>
+                              <h4 className="text-lg font-semibold text-gray-800">{result.subject_id}</h4>
+                              <p className="text-sm text-gray-600">{result.filename}</p>
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-600">Sleep Efficiency</p>
-                              <p className="text-lg font-semibold text-blue-600">{result.sleep_efficiency?.toFixed(1)}%</p>
+                            <div className="flex items-center space-x-2">
+                              <Star className="w-5 h-5 text-yellow-500" />
+                              <span className="font-semibold text-lg">{result.sleep_quality_score?.toFixed(1) || 'N/A'}/100</span>
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-600">Spindle Density</p>
-                              <p className="text-lg font-semibold text-purple-600">{result.spindle_density?.toFixed(2)}/min</p>
+                          </div>
+
+                          {result.hypnogram && result.hypnogram.length > 0 && (
+                            <div className="mb-6">
+                              {renderHypnogram(result.hypnogram)}
                             </div>
+                          )}
+
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <h5 className="font-semibold text-gray-800">Sleep Architecture</h5>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-600">Sleep Efficiency</p>
+                                  <p className="text-lg font-semibold text-blue-600">{result.sleep_efficiency?.toFixed(1)}%</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-600">Total Sleep Time</p>
+                                  <p className="text-lg font-semibold text-green-600">{(result.total_sleep_time/60)?.toFixed(1)}h</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-600">REM Sleep</p>
+                                  <p className="text-lg font-semibold text-purple-600">{result.rem_percent?.toFixed(1)}%</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-600">Deep Sleep (N3)</p>
+                                  <p className="text-lg font-semibold text-indigo-600">{result.n3_percent?.toFixed(1)}%</p>
+                                </div>
+                              </div>
+                            </div>
+
                             <div>
-                              <p className="text-sm font-medium text-gray-600">REM Theta Power</p>
-                              <p className="text-lg font-semibold text-green-600">{result.rem_theta_power?.toFixed(1)} μV²</p>
+                              {renderSleepStageChart(result)}
+                            </div>
+                          </div>
+
+                          <div className="mt-6 pt-4 border-t">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-600">Spindle Density</p>
+                                <p className="text-lg font-semibold text-orange-600">{result.spindle_density?.toFixed(2)}/min</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-600">REM Theta Power</p>
+                                <p className="text-lg font-semibold text-cyan-600">{result.rem_theta_power?.toFixed(1)} μV²</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-600">Awakenings</p>
+                                <p className="text-lg font-semibold text-red-600">{result.num_awakenings || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-600">Sleep Onset</p>
+                                <p className="text-lg font-semibold text-teal-600">{result.sleep_onset_latency?.toFixed(1)}min</p>
+                              </div>
                             </div>
                           </div>
                           
@@ -480,209 +840,127 @@ function App() {
                 )}
               </TabsContent>
 
-              <TabsContent value="statistics" className="space-y-6">
+              <TabsContent value="comparison" className="space-y-6">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-semibold text-gray-800">Statistical Analysis</h3>
-                  <Button 
-                    onClick={fetchStatisticalAnalysis}
-                    disabled={loading || analysisResults.length < 2}
-                    className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white"
-                  >
-                    {loading ? 'Analyzing...' : 'Run Analysis'}
-                  </Button>
+                  <h3 className="text-xl font-semibold text-gray-800">Population Comparison</h3>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="subject-select" className="text-sm font-medium">Select Subject:</Label>
+                    <select
+                      id="subject-select"
+                      value={selectedSubject}
+                      onChange={(e) => {
+                        setSelectedSubject(e.target.value);
+                        if (e.target.value) {
+                          fetchPopulationComparison(e.target.value);
+                        }
+                      }}
+                      className="px-3 py-1 border rounded-md text-sm"
+                    >
+                      <option value="">Choose subject...</option>
+                      {analysisResults.map((result) => (
+                        <option key={result.subject_id} value={result.subject_id}>
+                          {result.subject_id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                {statisticalResults ? (
-                  <div className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
-                          Correlation Analysis
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <h4 className="font-semibold text-gray-800 mb-3">Key Correlations</h4>
-                            {statisticalResults.correlation_analysis?.correlations && 
-                              Object.entries(statisticalResults.correlation_analysis.correlations).map(([key, value]) => (
-                                <div key={key} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                                  <span className="text-sm text-gray-600">{key.replace(/_/g, ' ')}</span>
-                                  <span className={`font-semibold ${Math.abs(value) > 0.5 ? 'text-red-600' : Math.abs(value) > 0.3 ? 'text-orange-600' : 'text-gray-600'}`}>
-                                    {value.toFixed(3)}
-                                  </span>
-                                </div>
-                              ))
-                            }
-                          </div>
-                          
-                          <div>
-                            <h4 className="font-semibold text-gray-800 mb-3">Sample Statistics</h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Sample Size</span>
-                                <span className="font-semibold">{statisticalResults.sample_size}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {statisticalResults.regression_analysis && !statisticalResults.regression_analysis.error && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center">
-                            <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
-                            Multiple Regression Results
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <h4 className="font-semibold text-gray-800 mb-3">Model Fit</h4>
-                              <div className="space-y-2">
-                                <div className="flex justify-between">
-                                  <span className="text-sm text-gray-600">R²</span>
-                                  <span className="font-semibold">{statisticalResults.regression_analysis.r_squared?.toFixed(3)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-sm text-gray-600">Adjusted R²</span>
-                                  <span className="font-semibold">{statisticalResults.regression_analysis.adjusted_r_squared?.toFixed(3)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-sm text-gray-600">F-statistic</span>
-                                  <span className="font-semibold">{statisticalResults.regression_analysis.f_statistic?.toFixed(2)}</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <h4 className="font-semibold text-gray-800 mb-3">Coefficients</h4>
-                              {statisticalResults.regression_analysis.coefficients && 
-                                Object.entries(statisticalResults.regression_analysis.coefficients).map(([key, value]) => (
-                                  <div key={key} className="flex justify-between items-center py-1">
-                                    <span className="text-sm text-gray-600">{key}</span>
-                                    <span className="font-semibold">{value.toFixed(3)}</span>
-                                  </div>
-                                ))
-                              }
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                {!selectedSubject ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Target className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Select a subject to view population comparison.</p>
+                  </div>
+                ) : loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p>Loading comparison data...</p>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Statistical analysis will appear here after running the analysis.</p>
-                    <p className="text-sm mt-2">Requires at least 2 analyzed subjects.</p>
-                  </div>
+                  renderPopulationComparison()
                 )}
               </TabsContent>
 
-              <TabsContent value="visualizations" className="space-y-6">
+              <TabsContent value="tips" className="space-y-6">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-semibold text-gray-800">Data Visualizations</h3>
-                  <Button 
-                    onClick={fetchVisualizations}
-                    disabled={loading || analysisResults.length < 2}
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                  >
-                    {loading ? 'Generating...' : 'Generate Charts'}
-                  </Button>
+                  <h3 className="text-xl font-semibold text-gray-800">Sleep Improvement Tips</h3>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="tips-subject-select" className="text-sm font-medium">Select Subject:</Label>
+                    <select
+                      id="tips-subject-select"
+                      value={selectedSubject}
+                      onChange={(e) => {
+                        setSelectedSubject(e.target.value);
+                        if (e.target.value) {
+                          fetchSleepTips(e.target.value);
+                        }
+                      }}
+                      className="px-3 py-1 border rounded-md text-sm"
+                    >
+                      <option value="">Choose subject...</option>
+                      {analysisResults.map((result) => (
+                        <option key={result.subject_id} value={result.subject_id}>
+                          {result.subject_id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                {Object.keys(visualizations).length > 0 ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {visualizations.correlation_heatmap && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Correlation Heatmap</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          {renderPlotlyChart(visualizations.correlation_heatmap)}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {visualizations.spindle_memory_scatter && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Spindle Density vs Memory</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          {renderPlotlyChart(visualizations.spindle_memory_scatter)}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {visualizations.theta_memory_scatter && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>REM Theta vs Memory</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          {renderPlotlyChart(visualizations.theta_memory_scatter)}
-                        </CardContent>
-                      </Card>
-                    )}
+                {!selectedSubject ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Lightbulb className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Select a subject to view personalized sleep tips.</p>
+                  </div>
+                ) : loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p>Generating personalized tips...</p>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Interactive visualizations will appear here after generation.</p>
-                    <p className="text-sm mt-2">Requires at least 2 analyzed subjects.</p>
-                  </div>
+                  renderSleepTips()
                 )}
               </TabsContent>
 
-              <TabsContent value="datasets" className="space-y-6">
-                <h3 className="text-xl font-semibold text-gray-800">Available Sleep Datasets</h3>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  {datasets.map((dataset, index) => (
-                    <Card key={index} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">{dataset.name}</CardTitle>
-                            <CardDescription className="mt-2">{dataset.description}</CardDescription>
-                          </div>
-                          <Badge variant="secondary">{dataset.subjects} subjects</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Duration</p>
-                            <p className="text-sm text-gray-800">{dataset.duration}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Sampling Rate</p>
-                            <p className="text-sm text-gray-800">{dataset.sampling_rate} Hz</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Subjects</p>
-                            <p className="text-sm text-gray-800">{dataset.subjects}</p>
-                          </div>
-                          <div className="flex items-end">
-                            <a 
-                              href={dataset.download_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                            >
-                              Download Dataset →
-                            </a>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+              <TabsContent value="tracking" className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-semibold text-gray-800">Longitudinal Tracking</h3>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="tracking-subject-select" className="text-sm font-medium">Select Subject:</Label>
+                    <select
+                      id="tracking-subject-select"
+                      value={selectedSubject}
+                      onChange={(e) => {
+                        setSelectedSubject(e.target.value);
+                        if (e.target.value) {
+                          fetchLongitudinalData(e.target.value);
+                        }
+                      }}
+                      className="px-3 py-1 border rounded-md text-sm"
+                    >
+                      <option value="">Choose subject...</option>
+                      {analysisResults.map((result) => (
+                        <option key={result.subject_id} value={result.subject_id}>
+                          {result.subject_id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+
+                {!selectedSubject ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Timeline className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Select a subject to view longitudinal tracking data.</p>
+                  </div>
+                ) : loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p>Loading tracking data...</p>
+                  </div>
+                ) : (
+                  renderLongitudinalTracking()
+                )}
               </TabsContent>
             </Tabs>
 
@@ -705,12 +983,12 @@ function App() {
                   </Button>
                   
                   <Button 
-                    onClick={downloadJupyter}
+                    onClick={downloadCSV}
                     variant="outline"
                     className="flex items-center justify-center py-6 border-2 border-orange-200 hover:border-orange-300 hover:bg-orange-50 transition-colors"
                   >
-                    <Download className="w-5 h-5 mr-2 text-orange-600" />
-                    Download Jupyter Notebook
+                    <FileSpreadsheet className="w-5 h-5 mr-2 text-orange-600" />
+                    Download CSV Data
                   </Button>
                 </div>
               </div>
